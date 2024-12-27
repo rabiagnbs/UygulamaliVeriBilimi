@@ -175,8 +175,8 @@ print("F1:", cv_results["test_f1"].mean())
 print("ROC AUC:", cv_results["test_roc_auc"].mean())
 
 
-with open('/Users/rabiagnbs/Desktop/VeriBilimi/pythonProject/VeriBilimiUygulamaları/UVB_Odev_211213054.pkl', 'wb') as file:
+with open('/UygulamalıVeriBilimi/UVB_Odev_211213054.pkl', 'wb') as file:
     pickle.dump(knn_final, file)
 
-with open('/Users/rabiagnbs/Desktop/VeriBilimi/pythonProject/VeriBilimiUygulamaları/UVB_Odev_211213054.pkl', 'rb') as file:
+with open('/UygulamalıVeriBilimi/UVB_Odev_211213054.pkl', 'rb') as file:
     loaded_model = pickle.load(file)
