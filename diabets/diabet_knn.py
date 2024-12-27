@@ -10,7 +10,7 @@ pd.set_option('display.width', 500)
 # 1. Exploratory Data Analysis
 ################################################
 
-df=pd.read_csv('/Users/rabiagnbs/Desktop/Code/VeriBilimi/PycharmProjects/pythonProject/diabets/diabetes.csv')
+df=pd.read_csv('/Users/rabiagnbs/Desktop/VeriBilimi/pythonProject/diabets/diabetes.csv')
 df.head()
 df.shape
 df.describe().T

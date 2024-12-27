@@ -50,7 +50,7 @@ warnings.simplefilter(action='ignore', category=Warning)
 # 3. Modeling using CART
 ################################################
 
-df = pd.read_csv("/Users/rabiagnbs/Desktop/Code/VeriBilimi/PycharmProjects/pythonProject/diabets/diabetes.csv")
+df = pd.read_csv("/Users/rabiagnbs/Desktop/VeriBilimi/pythonProject/diabets/diabetes.csv")
 
 y=df["Outcome"]
 X= df.drop(["Outcome"], axis=1)
