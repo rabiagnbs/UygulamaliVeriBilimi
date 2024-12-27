@@ -8,6 +8,7 @@ from imblearn.over_sampling import SMOTE
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, classification_report, make_scorer
 from sklearn.model_selection import GridSearchCV, cross_validate
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBModel, XGBClassifier
 
@@ -76,7 +77,7 @@ plt.show()
 df.isnull().sum()
 
 
-def preprocessing(df, q1=0.25, q3=0.75):
+def preprocessing(df, q1=0.25, q3=0.75, n_bins=4):
 
     def outlier_thresholds(dataframe, col_name, q1=0.25, q3=0.75):
         quartile1 = dataframe[col_name].quantile(q1)
@@ -95,20 +96,15 @@ def preprocessing(df, q1=0.25, q3=0.75):
         dataframe.loc[(dataframe[variable] < low_limit), variable] = low_limit
         dataframe.loc[(dataframe[variable] > up_limit), variable] = up_limit
 
-    def drop_high_corr_features(dataframe, threshold=0.6):
-        corr_matrix = dataframe.corr().abs()
-        upper_triangle = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
-        to_drop = [column for column in upper_triangle.columns if any(upper_triangle[column] > threshold)]
-        print(f"Kaldırılan Sütunlar: {to_drop}")
-        return dataframe.drop(columns=to_drop)
 
     for col in df.select_dtypes(include=['int64', 'float64']).columns:  # Yalnızca sayısal sütunları işler
         if check_outlier(df, col):
             print(f"Aykırı değerler '{col}' sütununda bulundu. Eşik değerlerle değiştiriliyor...")
             replace_with_thresholds(df, col)
-    drop_high_corr_features(df)
-    return df
 
+
+    print("Tüm sütunlar için aykırı değer işlemleri ve binning işlemi tamamlandı.")
+    return df
 preprocessing(df)
 
 df.head()
@@ -125,14 +121,17 @@ X_test = scaler.transform(X_test)
 smote = SMOTE(random_state=42)
 X_train_res, y_train_res = smote.fit_resample(X_train, y_train)
 
-catboost_model = CatBoostClassifier(random_state=17, verbose=False)
-catboost_model.fit(X_train_res, y_train_res)
-y_pred = catboost_model.predict(X_test)
+knn_model = KNeighborsClassifier()
+knn_model.fit(X_train_res, y_train_res)
+y_pred = knn_model.predict(X_test)
+
+
 print("Doğruluk Skoru:", accuracy_score(y_test, y_pred))
 print("Sınıflandırma Raporu:")
 print(classification_report(y_test, y_pred))
+
 cv_results = cross_validate(
-    catboost_model, X, y, cv=5,
+    knn_model, X, y, cv=5,
     scoring={"accuracy": "accuracy", "f1": "f1_weighted", "roc_auc": "roc_auc_ovr"}
 )
 
@@ -140,30 +139,44 @@ print("Accuracy:", cv_results["test_accuracy"].mean())
 print("F1:", cv_results["test_f1"].mean())
 print("ROC AUC:", cv_results["test_roc_auc"].mean())
 
-catboost_params = {"iterations": [200, 500,700],
-                   "learning_rate": [0.01, 0.05],
-                   "depth": [3,5, 7]}
+
+knn_params = {
+    'n_neighbors': [5, 7, 13, 15],
+    'weights': ['uniform', 'distance'],
+    'metric': ['euclidean', 'manhattan', 'minkowski'],
+}
+
+knn_best_grid = GridSearchCV(
+    estimator=knn_model,
+    param_grid=knn_params,
+    cv=10, n_jobs=-1, verbose=1,
+    scoring="accuracy"
+)
+
+knn_best_grid.fit(X_train_res, y_train_res)
+
+print("En İyi Parametreler:", knn_best_grid.best_params_)
 
 
-catboost_best_grid = GridSearchCV(catboost_model, catboost_params, cv=5, n_jobs=-1, verbose=True).fit(X, y)
-
-catboost_final = catboost_best_grid.best_estimator_
-catboost_final.fit(X_train_res, y_train_res)
-y_pred = catboost_final.predict(X_test)
+knn_final = knn_best_grid.best_estimator_
+y_pred = knn_final.predict(X_test)
 
 print("Doğruluk Skoru:", accuracy_score(y_test, y_pred))
 print("Sınıflandırma Raporu:")
 print(classification_report(y_test, y_pred))
+
 cv_results = cross_validate(
-    catboost_final, X, y, cv=5,
+    knn_final, X, y, cv=5,
     scoring={"accuracy": "accuracy", "f1": "f1_weighted", "roc_auc": "roc_auc_ovr"}
 )
+
 print("Accuracy:", cv_results["test_accuracy"].mean())
 print("F1:", cv_results["test_f1"].mean())
 print("ROC AUC:", cv_results["test_roc_auc"].mean())
 
-with open('UVB_Odev_211213054.pkl', 'wb') as file:
-    pickle.dump(catboost_final, file)
 
-with open('UVB_Odev_211213054.pkl', 'rb') as file:
+with open('/Users/rabiagnbs/Desktop/VeriBilimi/pythonProject/VeriBilimiUygulamaları/UVB_Odev_211213054.pkl', 'wb') as file:
+    pickle.dump(knn_final, file)
+
+with open('/Users/rabiagnbs/Desktop/VeriBilimi/pythonProject/VeriBilimiUygulamaları/UVB_Odev_211213054.pkl', 'rb') as file:
     loaded_model = pickle.load(file)
